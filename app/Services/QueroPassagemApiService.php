@@ -52,12 +52,13 @@ class QueroPassagemApiService
 
     public function filterStops($stops)
     {
-        $filteredStops = [];
-        foreach ($stops as $stop) {
+        return array_map(function ($stop) {
             if (Str::contains($stop['name'], ['SP', 'PR'])) {
-                $filteredStops[] = $stop;
+                $stop['is_allowed'] = true;
+            } else {
+                $stop['is_allowed'] = false;
             }
-        }
-        return $filteredStops;
+            return $stop;
+        }, $stops);
     }
 }
