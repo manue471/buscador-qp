@@ -4,11 +4,12 @@ namespace App\Services\Stop;
 use App\Services\QueroPassagemApiService;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class StopService extends QueroPassagemApiService
 {
 
-    public function getStops()
+    public function getStops($keyword)
     {
         try {
             $stops = Cache::remember('stops', 60 * 60, function () {
@@ -17,9 +18,22 @@ class StopService extends QueroPassagemApiService
                 $stops = $this->filterStops($stops);
                 return $stops;
             });
-            return $stops;
+            if (!$keyword) {
+                return response()->json($stops, 200);
+            }
+
+            $filteredStops = array_filter($stops, function ($stop) use ($keyword) {
+                $stopName = Str::ascii(Str::lower($stop['name']));
+                $keywordNormalized = Str::ascii(Str::lower($keyword));
+            
+                return Str::contains($stopName, $keywordNormalized);
+            });
+    
+            if (!$filteredStops) {
+                return response()->json(['error' => 'Não há resultados com o nome '.$keyword.''], 200);
+            }
+            return response()->json($filteredStops, 200);
         } catch (\Exception $e) {
-            dd($e->getMessage());
             Log::error('Erro ao acessar a API: ' . $e->getMessage());
             return null;
         }
@@ -39,23 +53,5 @@ class StopService extends QueroPassagemApiService
             
             return $stop;
         }, $stops);
-    }
-    public function searchStops($keyword)
-    {
-        $stops = Cache::get('stops');
-
-        if (!$stops) {
-            return response()->json(['error' => 'Não há dados disponíveis em cache.'], 404);
-        }
-
-        $filteredStops = array_filter($stops, function ($stop) use ($keyword) {
-            return Str::contains(Str::lower($stop['name']), Str::lower($keyword));
-        });
-
-        if (!$filteredStops) {
-            return response()->json(['error' => 'Não há estações com o nome '.$keyword.''], 200);
-        }
-
-        return response()->json(array_values($filteredStops));
     }
 }

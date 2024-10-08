@@ -20,9 +20,9 @@ class QueroPassagemController extends Controller
         $this->stopService = $stopService;
     }
 
-    public function getStops()
+    public function getStops(Request $request)
     {
-        $companies = $this->stopService->getStops();
+        $companies = $this->stopService->getStops($request->keyword);
         if (!$companies) {
             return response()->json(['error' => 'Não foi possível buscar os dados'], 500);
         }
