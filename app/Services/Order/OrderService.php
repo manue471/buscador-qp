@@ -29,7 +29,34 @@ class OrderService extends QueroPassagemApiService
             usort($orders, function ($a, $b) {
                 return strtotime($a['departure']['time']) <=> strtotime($b['departure']['time']);
             });
-            
+
+            return $orders;
+        } catch (\Exception $e) {
+            Log::error('Erro ao acessar a API: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function seatSearch($request)
+    {
+        $params = [
+            'travelId' => $request->input('travelId'),
+            'orientation' => $request->input('orientation'),
+            'type' => $request->input('type')
+        ];
+        if (!empty($request->input('travelId'))) {
+            return response()->json(['message' => 'Identificador da viagem é obrigatório'], 400);
+        }
+        try {
+            $response = $this->client->request('POST', 'new/seats', [
+                'json' => $params,
+            ]);
+            $orders = json_decode($response->getBody()->getContents(), true);
+
+            usort($orders, function ($a, $b) {
+                return strtotime($a['departure']['time']) <=> strtotime($b['departure']['time']);
+            });
+
             return $orders;
         } catch (\Exception $e) {
             Log::error('Erro ao acessar a API: ' . $e->getMessage());
