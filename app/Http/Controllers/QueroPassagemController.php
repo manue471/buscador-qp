@@ -47,4 +47,12 @@ class QueroPassagemController extends Controller
         }
         return response()->json($orders);
     }
+
+    public function getSeats(Request $request) {
+        $seats = $this->orderService->seatSearch($request);
+        if (!$seats) {
+            return response()->json(['error' => 'Não foi possível buscar os dados'], 500);
+        }
+        return response()->json($seats);
+    }
 }

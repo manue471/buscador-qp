@@ -15,43 +15,51 @@ class StopService extends QueroPassagemApiService
             $stops = Cache::remember('stops', 60 * 60, function () {
                 $response = $this->client->request('GET', 'stops');
                 $stops = json_decode($response->getBody()->getContents(), true);
-                $stops = $this->filterStops($stops);
-                return $stops;
+                return $this->filterStops($stops);
             });
+    
             if (!$keyword) {
-                return response()->json($stops, 200);
+                return response()->json($stops);
             }
-
+    
             $filteredStops = array_filter($stops, function ($stop) use ($keyword) {
                 $stopName = Str::ascii(Str::lower($stop['name']));
                 $keywordNormalized = Str::ascii(Str::lower($keyword));
-            
+                
                 return Str::contains($stopName, $keywordNormalized);
             });
     
-            if (!$filteredStops) {
-                return response()->json(['error' => 'Não há resultados com o nome '.$keyword.''], 200);
+            if (empty($filteredStops)) {
+                return response()->json(['error' => 'Não há resultados com o nome '.$keyword]);
             }
-            return response()->json($filteredStops, 200);
+    
+            return response()->json(array_values($filteredStops));
         } catch (\Exception $e) {
             Log::error('Erro ao acessar a API: ' . $e->getMessage());
-            return null;
+            return response()->json(['error' => 'Erro ao acessar a API'], 500);
         }
     }
+    
 
     public function filterStops($stops)
     {
-        return array_map(function ($stop) {
-            $stop['is_allowed'] = Str::contains($stop['url'], ['-sp', '-pr']);
+        $filteredStops = array_map(function ($stop) {
+            $stop['is_allowed'] = str_ends_with($stop['url'], '-sp') || str_ends_with($stop['url'], '-pr');
             
             if (!empty($stop['substops'])) {
                 foreach ($stop['substops'] as $index => $substop) {
-                    $isAllowedLocation =  Str::contains($substop['url'], ['-sp', '-pr']);
+                    $isAllowedLocation = str_ends_with($stop['url'], '-sp') || str_ends_with($stop['url'], '-pr');
                     $stop['substops'][$index]['is_allowed'] = $isAllowedLocation;
                 }
             }
             
             return $stop;
         }, $stops);
+    
+        usort($filteredStops, function ($a, $b) {
+            return $b['is_allowed'] <=> $a['is_allowed'];
+        });
+
+        return $filteredStops;
     }
 }

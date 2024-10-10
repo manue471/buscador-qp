@@ -3,6 +3,7 @@
 namespace App\Services\Order;
 use App\Services\QueroPassagemApiService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class OrderService extends QueroPassagemApiService
 {
@@ -44,7 +45,8 @@ class OrderService extends QueroPassagemApiService
             'orientation' => $request->input('orientation'),
             'type' => $request->input('type')
         ];
-        if (!empty($request->input('travelId'))) {
+
+        if (empty($request->input('travelId'))) {
             return response()->json(['message' => 'Identificador da viagem é obrigatório'], 400);
         }
         try {
@@ -52,10 +54,6 @@ class OrderService extends QueroPassagemApiService
                 'json' => $params,
             ]);
             $orders = json_decode($response->getBody()->getContents(), true);
-
-            usort($orders, function ($a, $b) {
-                return strtotime($a['departure']['time']) <=> strtotime($b['departure']['time']);
-            });
 
             return $orders;
         } catch (\Exception $e) {
